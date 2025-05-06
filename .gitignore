@@ -1,0 +1,57 @@
+# 系统/环境文件
+.aliyun/
+.ssh/
+.bash_history
+.bashrc
+.profile
+.vim/
+.viminfo
+.wget-hsts
+.lesshst
+.pip/
+.pydistutils.cfg
+.auto.tfvars
+.idea/
+*.swp
+.vscode/
+
+# Terraform 相关
+.terraform/
+.terraform.d/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+terraform.tfvars
+.terraformrc
+.tfplan
+
+# 敏感文件
+secrets.enc
+*.pcap
+var.alicloud_access_key
+
+# 临时文件/目录
+.cache/
+.config/
+.local/
+.rpmdb/
+.snap/
+*.log
+*.pcap
+debug.log
+.ansible/
+.gitconfig
+architecture.svg
+data.alicloud_instances.existing.instances.0
+data.alicloud_instances.existing_ecs.instances[*].id
+data.alicloud_vswitches.existing_vsw.vswitches
+safe-plan
+tfplan
+
+# 目录忽略
+snap/
+modules/
+var
+
+# 排除裸仓库目录
+*.git/
