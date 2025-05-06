@@ -55,3 +55,6 @@ var
 
 # 排除裸仓库目录
 *.git/
+.maegis/
+.zaegis/
+.~aegis/
