@@ -50,11 +50,8 @@ tfplan
 
 # 目录忽略
 snap/
-modules/
-var
 
-# 排除裸仓库目录
-*.git/
+git/
 .maegis/
 .zaegis/
 .~aegis/
