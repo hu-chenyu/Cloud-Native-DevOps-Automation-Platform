@@ -1,8 +1,8 @@
 provider "alicloud" {
   alias      = "hangzhou"
   region     = "cn-hangzhou"
-  access_key = "LTAI5tBZWGPqmwvQCeUEiRW4"
-  secret_key = "Sc06ipPZFnPU4IPisXGE01M5OkfCjb"
+  access_key = var.alicloud_access_key   
+  secret_key = var.alicloud_secret_key
 }
 
 terraform {
