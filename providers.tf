@@ -1,6 +1,5 @@
 provider "alicloud" {
-  alias      = "main"
-  region     = "cn-hangzhou"
-  access_key = var.alicloud_access_key
-  secret_key = var.alicloud_secret_key
+  alias      = "main"         # 配置别名
+  region     = "cn-hangzhou"  # 地域杭州
+  profile    = "default"      # 使用~/.aliyun/credentials的default账号
 }

@@ -4,9 +4,9 @@
 
 ```bash
 ├── modules/            # 子模块目录
-│   ├── network/       # 网络层资源（VPC/子网/安全组）
-│   ├── compute/       # 计算层资源（ECS实例管理）
-│   └── loadbalancer/  # 流量层资源（SLB负载均衡器）
+│   ├── network/        # 网络层资源（VPC/子网/安全组）
+│   ├── compute/        # 计算层资源（ECS实例管理）
+│   └── loadbalancer/   # 流量层资源（SLB负载均衡器）
 ├── main.tf             # 主入口文件
 ├── outputs.tf          # 基础设施输出定义
 ├── variables.tf        # 输入变量声明
