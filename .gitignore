@@ -50,7 +50,11 @@ tfplan
 
 # 目录忽略
 snap/
-
+import_key.sh
+modules/replace-pattern.txt
+terraform.tfstate.1746635586.backup
+terraform.tfstate.1746635593.backup
+var
 git/
 .maegis/
 .zaegis/
