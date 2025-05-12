@@ -1,0 +1,6 @@
+---
+- hosts: web
+  vars:
+    docker_registry_mirror: "https://i3v2r2sz.mirror.aliyuncs.com"
+  roles:
+    - role: docker

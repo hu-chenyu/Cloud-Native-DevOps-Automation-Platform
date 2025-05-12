@@ -1,0 +1,8 @@
+{
+  "registry-mirrors": ["https://{{ docker_registry_mirror }}"],
+  "default-cgroupns-mode": "private",
+  "exec-opts": ["native.cgroupdriver=systemd"],
+  "log-driver": "json-file",
+  "log-opts": { "max-size": "100m" },
+  "storage-driver": "overlay2"
+}

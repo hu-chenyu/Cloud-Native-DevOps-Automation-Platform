@@ -1,0 +1,18 @@
+---
+- name: 安装Nginx
+  apt: 
+    name: nginx 
+    state: latest
+  when: ansible_os_family == 'Debian'
+  
+- name: 部署配置文件
+  template:
+    src: nginx.conf.j2 
+    dest: /etc/nginx/nginx.conf
+  notify: 重启Nginx
+
+- name: 部署默认页面
+  ansible.builtin.copy:
+    src: "index.html"
+    dest: /var/www/html/index.html
+    mode: '0644' 

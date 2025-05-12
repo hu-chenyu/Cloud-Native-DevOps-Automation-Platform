@@ -1,0 +1,95 @@
+---
+- name: 安装依赖包
+  apt:
+    name: ["apt-transport-https", "ca-certificates", "curl", "software-properties-common"]
+    state: present
+    update_cache: yes
+
+- name: 添加Docker官方GPG密钥
+  apt_key:
+    url: "https://mirrors.aliyun.com/docker-ce/linux/ubuntu/gpg"
+    state: present
+
+- name: 添加Docker仓库
+  apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu jammy stable"
+    state: present
+
+- name: 安装Docker CE
+  apt:
+    name: 
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+    state: present
+    update_cache: yes
+
+- name: 加载overlay2内核模块
+  become: yes
+  modprobe:
+    name: overlay
+    state: present
+  tags: kernel
+
+- name: 配置Docker核心参数
+  copy:
+    dest: /etc/docker/daemon.json
+    content: |
+      {
+        "default-cgroupns-mode": "private",
+        "exec-opts": ["native.cgroupdriver=systemd"],
+        "log-driver": "json-file",
+        "log-opts": {
+          "max-size": "100m"
+        },
+        "storage-driver": "overlay2",
+        "registry-mirrors": ["https://i3v2r2sz.mirror.aliyuncs.com"]
+      }
+  notify: restart docker
+
+- name: 重载systemd配置
+  command: systemctl daemon-reload
+  changed_when: false
+
+- name: 启动Docker服务
+  service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: 收集Docker信息
+  community.docker.docker_host_info:
+  register: docker_facts
+  failed_when: false  
+  tags: verify
+
+- name: 验证docker配置
+  become: yes
+  assert:
+    that: 
+      - "docker_facts.host_info.Driver == 'overlay2'"  # 直接访问存储驱动字段
+      - "docker_facts.host_info.MemoryLimit is true"   # 验证内存限制已启用
+      - "'memory' not in docker_facts.host_info"
+  tags: verify
+
+- name: 显示完整docker_facts内容
+  debug:
+    var: docker_facts
+  tags: verify
+
+- name: 启动带内存限制的容器
+  become: yes
+  docker_container:
+    name: myapp
+    image: nginx:latest
+    memory: 1.5g
+    restart_policy: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - "/etc/localtime:/etc/localtime:ro"
+    dns:  # 添加DNS配置
+      - 8.8.8.8
+      - 114.114.114.114
+    log_driver: json-file  # 强制日志驱动
+  tags: app

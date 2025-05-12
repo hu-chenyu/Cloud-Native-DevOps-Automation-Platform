@@ -1,0 +1,5 @@
+- hosts: web_servers
+  roles:
+    - role: nginx
+      vars:
+        listen_port: 80

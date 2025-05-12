@@ -1,0 +1,7 @@
+---
+- name: restart docker
+  service:
+    name: docker
+    state: restarted
+  async: 60  # 最大等待时间
+  poll: 0    # 异步执行避免阻塞

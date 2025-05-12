@@ -1,0 +1,12 @@
+worker_processes {{ worker_processes | default(2) }};
+
+events {
+    worker_connections {{ worker_connections | default(1024) }};
+}
+
+http {
+    server {
+        listen {{ listen_port | default(80) }};
+        root {{ web_root | default('/var/www/html') }};
+    }
+}
