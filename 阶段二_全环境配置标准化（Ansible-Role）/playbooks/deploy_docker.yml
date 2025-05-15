@@ -1,6 +1,95 @@
 ---
 - hosts: web
-  vars:
-    docker_registry_mirror: "https://i3v2r2sz.mirror.aliyuncs.com"
   roles:
     - role: docker
+  collections:
+    - community.docker
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    docker_registry_mirror: "https://i3v2r2sz.mirror.aliyuncs.com"
+    ansible_connection: local 
+    ansible_docker_connection: "unix:///var/run/docker.sock"  
+  tasks:
+    # Docker部署核心任务
+    - name: 配置镜像加速器
+      ini_file:
+        path: /etc/docker/daemon.json
+        create: yes
+        section: ""
+        option: "registry-mirrors"
+        value: "{{ docker_registry_mirror }}"
+
+    - name: 创建监控日志目录
+      file:
+        path: /var/log/container_monitor/
+        state: directory
+        mode: 0755
+
+    - name: 配置日志轮转
+      copy:
+        content: |
+          /var/log/container_monitor/*.log {
+              daily
+              rotate 7
+              compress
+              missingok
+              notifempty
+          }
+        dest: /etc/logrotate.d/docker_monitor
+        owner: root
+        group: root
+        mode: 0644
+      notify: reload logrotate
+
+    # 新增健康检查模块
+    - name: 部署健康检查脚本
+      copy:
+        src: "files/health_check.sh"
+        dest: /usr/local/bin/health_check.sh 
+        owner: root
+        group: root  
+        mode: 0755
+      notify: reload cron
+
+    - name: 智能容器健康检查（含自愈机制）
+      cron:
+        name: "docker_health_monitor"
+        minute: "*/5"
+        job: >-
+          flock -n /tmp/docker_health.lock -c "/usr/local/bin/health_check.sh || 
+          (systemctl restart docker && echo '[$(date)] 服务已重启' >> 
+          /var/log/container_monitor/health_check_$(date +\%Y\%m\%d).log)"
+        user: root
+        cron_file: /etc/cron.d/docker_monitor 
+      notify: restart cron
+
+  handlers:
+    - name: graceful restart docker
+      systemd:
+        name: docker
+        state: reloaded  # 优先尝试重载配置
+      register: docker_reload
+
+    - name: force restart docker
+      systemd:
+        name: docker
+        state: restarted
+      when: docker_reload is failed
+
+    - name: reload logrotate
+      systemd:  # 使用systemd模块更可靠
+        name: logrotate
+        state: reloaded
+      when: ansible_service_mgr == "systemd"
+
+    - name: restart cron
+      systemd:
+        name: cron
+        state: restarted
+      register: cron_restart_result
+
+    # 增加容错判断
+    - name: 检查 cron 重载状态
+      debug:
+        msg: "Cron 服务重载失败，可能需要重启"
+      when: cron_restart_result is failed

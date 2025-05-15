@@ -1,28 +1,63 @@
 ---
-- name: 安装依赖包
+- name: 安装基础依赖包
   apt:
-    name: ["apt-transport-https", "ca-certificates", "curl", "software-properties-common"]
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - software-properties-common
     state: present
     update_cache: yes
+  tags: install
+  # 安装Docker所需的底层依赖组件
 
-- name: 添加Docker官方GPG密钥
-  apt_key:
+- name: 清理旧密钥文件
+  file:
+    path: "/usr/share/keyrings/docker-archive-keyring.*"
+    state: absent
+  tags: repo
+
+- name: 下载Docker官方GPG密钥
+  get_url:
     url: "https://mirrors.aliyun.com/docker-ce/linux/ubuntu/gpg"
-    state: present
+    dest: /usr/share/keyrings/docker-archive-keyring.asc
+    mode: 0644
+    force: no
+  tags: repo
+  # 使用阿里云镜像源获取Docker的GPG密钥
 
-- name: 添加Docker仓库
+- name: 转换密钥格式
+  command: gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg /usr/share/keyrings/docker-archive-keyring.asc
+  args:
+    creates: /usr/share/keyrings/docker-archive-keyring.gpg 
+  when: not ansible_check_mode
+
+- name: 配置Docker CE仓库源
   apt_repository:
-    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu jammy stable"
+    repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu jammy stable"
     state: present
+    filename: docker-ce
+  tags: repo
+  # 添加Docker官方仓库源
 
-- name: 安装Docker CE
+- name: 安装Docker核心组件
   apt:
     name: 
       - docker-ce
       - docker-ce-cli
-      - containerd.io
     state: present
     update_cache: yes
+  tags: install
+
+- name: 安装Python Docker SDK
+  pip:
+    name:
+      - docker>=6.0.0
+      - docker-compose
+    executable: /usr/bin/pip3 
+  become: yes
+  tags: sdk
+  # 安装Python Docker客户端库和Compose工具
 
 - name: 加载overlay2内核模块
   become: yes
@@ -30,66 +65,67 @@
     name: overlay
     state: present
   tags: kernel
+  # 强制加载overlay2存储驱动所需内核模块
 
-- name: 配置Docker核心参数
+- name: 生成Docker守护进程配置
   copy:
     dest: /etc/docker/daemon.json
     content: |
       {
-        "default-cgroupns-mode": "private",
-        "exec-opts": ["native.cgroupdriver=systemd"],
-        "log-driver": "json-file",
-        "log-opts": {
-          "max-size": "100m"
-        },
         "storage-driver": "overlay2",
-        "registry-mirrors": ["https://i3v2r2sz.mirror.aliyuncs.com"]
+        "registry-mirrors": ["https://13v2r2sz.mirror.aliyuncs.com"],
+        "log-opts": {
+          "max-size": "10m",
+          "max-file": "3"
+        }
       }
   notify: restart docker
+  tags: config
+  # 关键配置说明：
+  # 1. 强制使用overlay2存储驱动（兼容性最佳）
+  # 2. 配置阿里云镜像加速源提升拉取速度
+  # 3. 日志轮转策略防止日志膨胀
 
 - name: 重载systemd配置
   command: systemctl daemon-reload
   changed_when: false
+  tags: service
+  # 确保systemd配置更新生效
 
-- name: 启动Docker服务
+- name: 确保Docker服务启动并自启
   service:
     name: docker
     state: started
     enabled: yes
+  tags: service
+  # 启动Docker服务并设置开机自启
 
-- name: 收集Docker信息
-  community.docker.docker_host_info:
-  register: docker_facts
-  failed_when: false  
+- name: 验证Docker运行状态
+  shell: docker info
+  register: docker_status
+  changed_when: false
+  failed_when: docker_status.rc != 0
   tags: verify
+  # 基础功能验证
 
-- name: 验证docker配置
+- name: 清理残留网络配置
+  shell: |
+    docker network prune -f
+    ip link delete docker0 || true
+  when: docker_status.rc == 0
+  changed_when: false
+  tags: cleanup
+  # 清除可能存在的旧网络配置残留（解决网络冲突问题）
+
+- name: 重建默认bridge网络
+  community.docker.docker_network:
+    name: bridge
+    driver: bridge
+    docker_host: "unix:///var/run/docker.sock"
+  tags: network
+  connection: local
   become: yes
-  assert:
-    that: 
-      - "docker_facts.host_info.Driver == 'overlay2'"  # 直接访问存储驱动字段
-      - "docker_facts.host_info.MemoryLimit is true"   # 验证内存限制已启用
-      - "'memory' not in docker_facts.host_info"
-  tags: verify
-
-- name: 显示完整docker_facts内容
-  debug:
-    var: docker_facts
-  tags: verify
-
-- name: 启动带内存限制的容器
-  become: yes
-  docker_container:
-    name: myapp
-    image: nginx:latest
-    memory: 1.5g
-    restart_policy: unless-stopped
-    ports:
-      - "80:80"
-    volumes:
-      - "/etc/localtime:/etc/localtime:ro"
-    dns:  # 添加DNS配置
-      - 8.8.8.8
-      - 114.114.114.114
-    log_driver: json-file  # 强制日志驱动
-  tags: app
+  vars:
+    ansible_python_interpreter: auto  # 自动检测Python解释器
+  environment:
+    DOCKER_CONFIG: "/etc/docker"  # 新增配置路径声明

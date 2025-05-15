@@ -1,18 +1,55 @@
 ---
-- name: 安装Nginx
+# 基础设施准备
+- name: 安装Nginx+模块
   apt: 
-    name: nginx 
+    name: "nginx-full" 
     state: latest
   when: ansible_os_family == 'Debian'
-  
-- name: 部署配置文件
+  notify: 重启Nginx
+
+# 配置部署阶段
+- name: 部署主配置文件
   template:
     src: nginx.conf.j2 
     dest: /etc/nginx/nginx.conf
-  notify: 重启Nginx
+  notify: 热重载Nginx
 
+# 配置验证
+- name: 校验Nginx配置
+  command: nginx -t
+  register: nginx_test
+  changed_when: false
+  failed_when: nginx_test.rc != 0
+  notify: 热重载Nginx
+
+# 内容部署
 - name: 部署默认页面
-  ansible.builtin.copy:
-    src: "index.html"
-    dest: /var/www/html/index.html
-    mode: '0644' 
+  copy:
+    src: index.html
+    dest: /var/www/html/
+    owner: root
+    group: root
+    mode: '0644'
+
+# 服务状态保障
+- name: 确保Nginx运行
+  service:
+    name: nginx
+    state: started
+    enabled: yes
+
+# 健康监控体系
+- name: 部署健康检查脚本
+  copy:
+    src: files/health_check.sh
+    dest: /usr/local/bin/health_check.sh
+    mode: 0755
+
+- name: 添加智能健康检查
+  cron:
+    name: "Nginx健康监控"
+    minute: "*/5"
+    job: >
+      /usr/local/bin/health_check.sh || 
+      (systemctl restart nginx && 
+      echo '[$(date)] 服务已重启' >> /var/log/nginx_health.log)

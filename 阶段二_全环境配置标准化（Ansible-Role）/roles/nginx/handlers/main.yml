@@ -1,4 +1,9 @@
 ---
+- name: 热重载Nginx
+  service: 
+    name: nginx 
+    state: reloaded
+
 - name: 重启Nginx
   service:
     name: nginx

@@ -1,4 +1,7 @@
 - hosts: web_servers
+  vars:
+    ssl_cert: "/etc/ssl/certs/server.crt"  # 证书文件路径
+    ssl_key: "/etc/ssl/private/server.key" # 私钥路径
   roles:
     - role: nginx
       vars:

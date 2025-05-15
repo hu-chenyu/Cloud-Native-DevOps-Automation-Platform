@@ -1,12 +1,27 @@
-worker_processes {{ worker_processes | default(2) }};
+user nginx;
+worker_processes {{ ansible_processor_cores }};  # 自动适配CPU核心数
 
 events {
-    worker_connections {{ worker_connections | default(1024) }};
+    worker_connections 1024;
 }
 
 http {
+    access_log /var/log/nginx/access.log;
+    error_log /var/log/nginx/error.log;
+
     server {
-        listen {{ listen_port | default(80) }};
-        root {{ web_root | default('/var/www/html') }};
+        listen 80;
+        server_name _;
+
+        # 核心反向代理配置
+        location / {
+            proxy_pass http://127.0.0.1:8080;
+            proxy_set_header Host $host;
+        }
+
+        # 简化版健康检查
+        location = /health {
+            return 200 "OK";
+        }
     }
 }
