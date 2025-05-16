@@ -55,5 +55,5 @@ vswitch_id = "vsw-bp1bl4frgzh72m6aoic2e"
 ├── outputs.tf                   # 全局输出定义（跨模块关键数据暴露）
 ├── providers.tf                 # 云厂商认证配置（阿里云AccessKey管理）
 ├── README.md                    # 项目文档（部署指南/模块说明）
-├── Terraform模块开发成果报告.md # 技术细节报告（架构设计/性能指标）
+├── Terraform模块开发成果报告.md  # 技术细节报告（架构设计/性能指标）
 └── variables.tf                 # 全局变量定义（环境差异化参数配置）
