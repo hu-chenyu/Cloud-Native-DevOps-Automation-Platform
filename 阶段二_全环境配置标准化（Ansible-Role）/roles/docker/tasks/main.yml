@@ -49,6 +49,12 @@
     update_cache: yes
   tags: install
 
+- name: 配置AppArmor策略
+  apt:
+    name: apparmor-utils
+    state: present
+  tags: security
+
 - name: 安装Python Docker SDK
   pip:
     name:
@@ -86,6 +92,21 @@
   # 2. 配置阿里云镜像加速源提升拉取速度
   # 3. 日志轮转策略防止日志膨胀
 
+- name: 检查日志轮转配置
+  stat:
+    path: /etc/logrotate.d/docker_monitor
+  register: logrotate_conf
+  tags: verify
+
+- name: 验证日志轮转
+  shell: logrotate -vf /etc/logrotate.d/docker_monitor
+  register: logrotate_result
+  changed_when:
+    - logrotate_conf.stat.exists
+    - "'rotating' in logrotate_result.stdout"
+  tags: verify
+  when: logrotate_conf.stat.exists
+
 - name: 重载systemd配置
   command: systemctl daemon-reload
   changed_when: false
@@ -107,6 +128,21 @@
   failed_when: docker_status.rc != 0
   tags: verify
   # 基础功能验证
+
+- name: 部署cAdvisor监控
+  docker_container:
+    name: cadvisor
+    image: zcube/cadvisor:latest
+    privileged: yes
+    volumes:
+      - "/:/rootfs:ro"
+      - "/sys:/sys:ro"
+      - "/var/lib/docker:/var/lib/docker:ro"
+    ports:
+      - "0.0.0.0:8081:8080"
+    restart_policy: always
+  tags: monitoring
+  when: docker_status.rc == 0  # 仅在Docker正常运行时执行
 
 - name: 清理残留网络配置
   shell: |

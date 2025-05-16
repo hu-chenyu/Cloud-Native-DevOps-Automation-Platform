@@ -2,6 +2,7 @@
 - hosts: web
   roles:
     - role: docker
+      tags: [docker_core,logrotate]
   collections:
     - community.docker
   vars:
@@ -11,14 +12,6 @@
     ansible_docker_connection: "unix:///var/run/docker.sock"  
   tasks:
     # Docker部署核心任务
-    - name: 配置镜像加速器
-      ini_file:
-        path: /etc/docker/daemon.json
-        create: yes
-        section: ""
-        option: "registry-mirrors"
-        value: "{{ docker_registry_mirror }}"
-
     - name: 创建监控日志目录
       file:
         path: /var/log/container_monitor/
@@ -26,6 +19,7 @@
         mode: 0755
 
     - name: 配置日志轮转
+      tags: [logrotate,monitoring]
       copy:
         content: |
           /var/log/container_monitor/*.log {
