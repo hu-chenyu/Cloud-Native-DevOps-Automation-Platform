@@ -1,0 +1,82 @@
+pipeline {
+    agent any
+    environment {
+        ACR_REGISTRY = 'crpi-uza247h4wtxt6urw.cn-shenzhen.personal.cr.aliyuncs.com'
+        ACR_NAMESPACE = 'devops-platform-plus'
+        REPO_NAME = 'ansible-role'
+        ANSIBLE_DIR = '/opt/ansible' 
+    }
+    stages {
+        stage('拉取代码') {
+            steps {
+                git branch: 'main', 
+                    url: 'git@github.com:hu-chenyu/Cloud-Native-DevOps-Automation-Platform.git',
+                    credentialsId: 'github-ssh'
+                sh "ls -l ${env.ANSIBLE_DIR}/container_app/app.py"
+            }
+        }
+
+        stage('Ansible配置Docker环境') {
+            steps {
+                dir(env.ANSIBLE_DIR) {
+                    ansiblePlaybook(
+                        playbook: 'playbooks/deploy_docker.yml',
+                        inventory: 'inventory/manual_ecs.ini',
+                        credentialsId: 'aliyun-ssh',
+                        extras: '''
+                            --private-key=./id_ed25519
+                            -e "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'"
+                        '''
+                    )
+                }
+            }
+        }
+        
+        stage('构建镜像') {
+            steps {
+                dir(env.ANSIBLE_DIR) {
+                    script {
+                        sh "docker build -t ${ACR_REGISTRY}/${ACR_NAMESPACE}/${REPO_NAME}:${env.BUILD_ID} -f Dockerfile ."
+                    }
+                }
+            }
+        }
+
+        stage('推送镜像') {
+            steps {
+                script {
+                    // 使用 withCredentials 绑定凭据
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: 'aliyun-acr',
+                            usernameVariable: 'DOCKER_USER',
+                            passwordVariable: 'DOCKER_PASSWORD'
+                        )
+                    ]) {
+                        sh '''
+                            # 手动转义中文用户名
+                            ESCAPED_USER=$(echo "$DOCKER_USER" | sed 's/ /%20/g')
+                    
+                            # 安全登录
+                            echo "$DOCKER_PASSWORD" | docker login --username "$ESCAPED_USER" \
+                                --password-stdin "${ACR_REGISTRY}"
+                    
+                            # 精确镜像标签
+                            IMAGE_TAG="${ACR_REGISTRY}/${ACR_NAMESPACE}/${REPO_NAME}:${BUILD_ID}"
+                            docker push "$IMAGE_TAG"
+                        '''
+                    }
+                }
+            }
+        }
+        
+        stage('镜像校验') {
+            steps {
+                script {
+                    def imageTag = "${ACR_REGISTRY}/${ACR_NAMESPACE}/${REPO_NAME}:${env.BUILD_ID}"
+                    sh "docker pull ${imageTag} && docker inspect ${imageTag}"
+                }
+            }
+        }
+    }
+}
