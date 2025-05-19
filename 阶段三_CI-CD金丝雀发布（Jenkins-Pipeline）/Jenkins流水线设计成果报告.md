@@ -22,8 +22,8 @@
 ---
 
 ### 🚀 关键技术突破
-#### **安全凭据全链路管理**
 ```groovy
+# 安全凭据全链路管理
 withCredentials([
     usernamePassword(
         credentialsId: 'aliyun-acr',
