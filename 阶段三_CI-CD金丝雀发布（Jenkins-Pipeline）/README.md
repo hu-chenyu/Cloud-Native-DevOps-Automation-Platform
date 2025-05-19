@@ -22,8 +22,8 @@
 SUCCESS: 全阶段零失败达成
 ```
 
-###📂 项目结构
-```bash
+#📂 项目结构
+```
 ├── Dockerfile           # 容器化构建标准          
 ├── Pipeline             # 流水线脚本             
 └── README.md            # 项目文档           
