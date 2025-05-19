@@ -14,7 +14,7 @@
 # 全链路Pipeline执行记录（触发方式: GitHub Webhook）
 [Pipeline] {
 |-- 阶段1: 拉取代码      ✅ 耗时38s (Git Commit ID: 0ccc3f1)
-|-- 阶段2: Ansible配置   ✅ 23项Docker管控任务全绿
+|-- 阶段2: Ansible配置   ✅ 22项Docker管控任务全绿
 |-- 阶段3: 构建镜像      ✅ 镜像大小176MB (压缩率62%)
 |-- 阶段4: 推送镜像      ✅ 阿里云CR推送速率18.4MB/s
 |-- 阶段5: 镜像校验      ✅ 校验码匹配: sha256:a70897e...
