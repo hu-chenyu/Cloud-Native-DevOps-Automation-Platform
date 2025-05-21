@@ -1,0 +1,12 @@
+groups:
+- name: service-critical
+  rules:
+  - alert: HighHttp5xxErrorRate
+    expr: sum(rate(flask_http_request_total{status=~"5.."}[5m]))/sum(rate(flask_http_request_total[5m])) > 0.05  # 5分钟内5xx错误率>5%
+    for: 2m  # 持续2分钟触发
+    labels:
+      severity: critical
+      service: myapp
+    annotations:
+      summary: "HTTP 5xx错误率过高 (实例: {{ $labels.instance }})"
+      description: "当前值: {{ $value | printf \"%.2f\" }}% | 查看仪表盘: http://120.76.42.201:3000/d/dXpJBuaNz/docker-monitoring?orgId=1&from=now-5m&to=now"
