@@ -31,6 +31,7 @@ HTTP状态分布（模拟场景）：
 └── 网络吞吐: 1.23MB/s（e-HP接口数据）
 ```
 ### 📂 项目结构
+```bash
 ├── prometheus/
 │   ├── prometheus.yml    # 监控主配置（含抓取规则）
 │   └── rules/            
