@@ -1,0 +1,31 @@
+# prometheus.yml
+global:
+  evaluation_interval: 15s  # 每15秒评估一次规则
+  scrape_interval: 15s      # 默认抓取间隔为15秒
+
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets: ["alertmanager:9093"]
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+
+  - job_name: 'flask-app'
+    static_configs:
+      - targets: ['myapp:5000']
+    metrics_path: /metrics
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: '(.*):5000'
+        replacement: '$1-myapp'
+
+rule_files:
+  - "/etc/prometheus/rules/*.yml"
