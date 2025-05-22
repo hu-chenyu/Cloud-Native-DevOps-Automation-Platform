@@ -10,3 +10,9 @@ groups:
     annotations:
       summary: "HTTP 5xx错误率过高 (实例: {{ $labels.instance }})"
       description: "当前值: {{ $value | printf \"%.2f\" }}% | 查看仪表盘: http://120.76.42.201:3000/d/dXpJBuaNz/docker-monitoring?orgId=1&from=now-5m&to=now"
+  - alert: HighLatencyP95
+    expr: |
+      histogram_quantile(0.95, rate(flask_http_request_duration_seconds_bucket[5m])) > 1
+    for: 5m
+    labels:
+      severity: warning
