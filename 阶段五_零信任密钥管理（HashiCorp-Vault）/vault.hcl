@@ -1,13 +1,6 @@
 ui = true  # 启用Web界面
 
 seal "shamir" {}
-# seal "transit" {
-#   auto_rotate_period = "720h"  # 每30天自动轮换
-#   address    = "http://120.76.42.201:8200"
-#   token      = "hvs.sdv4CxmZVNhlHUmaeOqSFyB3"
-#   mount_path = "transit/"
-#   key_name   = "unseal-key"
-# }
 
 # 启用 Vault 的 Prometheus 监控指标
 telemetry {
