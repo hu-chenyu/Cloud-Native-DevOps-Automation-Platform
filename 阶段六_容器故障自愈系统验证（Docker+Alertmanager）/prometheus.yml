@@ -1,0 +1,55 @@
+---
+global:
+  evaluation_interval: 10s  # 每10秒评估一次规则
+  scrape_interval: 15s      # 抓取间隔为10秒
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["120.76.42.201:9093"]
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+#  - job_name: 'cadvisor'
+#    static_configs:
+#      - targets: ['cadvisor:8080']
+
+#  - job_name: 'flask-app'
+#    static_configs:
+#      - targets: ['myapp:5000']
+#    metrics_path: /metrics
+#    relabel_configs:
+#      - source_labels: [__address__]
+#        target_label: instance
+#        regex: '(.*):5000'
+#        replacement: '$1-myapp'
+
+  - job_name: 'myapp-chaos-monitor'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['120.76.42.201:5001']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'myapp-chaos'
+
+  - job_name: 'blackbox_http'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+        - http://120.76.42.201:5000/health
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 120.76.42.201:9115  # 黑盒监控服务地址
+
+rule_files:
+  - "/etc/prometheus/rules/*.yml"

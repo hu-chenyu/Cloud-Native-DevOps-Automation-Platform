@@ -1,0 +1,46 @@
+groups:
+- name: service-critical
+  rules:
+  - alert: HighHttp5xxErrorRate
+    expr: sum(rate(flask_http_request_total{status=~"5.."}[5m]))/sum(rate(flask_http_request_total[5m])) * 100 > 5 
+    for: 5m  # 延长触发时间减少噪声
+    labels:
+      severity: critical
+      service: myapp
+    annotations:
+      summary: "HTTP 5xx错误率过高 (实例: {{ $labels.instance }})"
+      description: "当前值: {{ $value | printf \"%.2f\" }}% | 查看仪表盘: http://120.76.42.201:3000/d/dXpJBuaNz/docker-monitoring?orgId=1&from=now-5m&to=now"
+
+- name: myapp-chao_alerts
+  rules:
+  - alert: AppHealthCheckFailed
+    expr: probe_success{job="blackbox_http", instance="http://myapp-chaos:5000/health"} == 0
+    for: 1m
+    labels:
+      severity: critical
+      automation_target: "myapp-chaos"
+    annotations:
+      summary: "应用健康检查失败 (实例: {{ $labels.instance }})"
+      recovery_policy: "auto-restart"
+
+- name: vault_key_rotation
+  rules:
+  - alert: KeyRotationFailure
+    expr: increase(vault_transit_key_rotations_total{key="default"}[24h]) == 0  # 24小时内无轮换
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      description: "密钥轮换失败：{{ $labels.key }}，最后一次轮换时间：{{ $value }}秒前"
+
+- name: container-alerts
+  rules:
+  - alert: ChaosContainerDown
+    expr: up{job="myapp-chaos-monitor"} == 0
+    for: 10s
+    labels:
+      severity: critical
+      auto_trigger: "true"
+    annotations:
+      summary: "实验容器 {{ $labels.instance }} 恢复检测"
+      description: "当容器恢复后此告警应自动清除"

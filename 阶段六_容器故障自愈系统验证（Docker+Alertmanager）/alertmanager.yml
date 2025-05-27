@@ -1,0 +1,40 @@
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: 'smtp.163.com:465'  # 网易邮箱SMTP服务器地址
+  smtp_from: 'iamhuchenyu@163.com'    # 发件人邮箱
+  smtp_auth_username: 'iamhuchenyu@163.com'   # 邮箱账号
+  smtp_auth_password: '******'  # 授权码
+  smtp_require_tls: false              # SSL加密
+
+route:
+  group_by: [alertname]
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 1h
+  receiver: 'jenkins-webhook'
+  routes:
+    - match:
+        alertname: AppHealthCheckFailed
+      receiver: 'jenkins-webhook'
+
+receivers:
+- name: 'jenkins-webhook'
+  webhook_configs:
+  - url: 'http://120.76.42.201:8080/generic-webhook-trigger/invoke?token=831725f0a759bbf8dbcec7af6a012ce3'
+    send_resolved: false
+    http_config:
+      basic_auth:
+        username: 'hu-chenyu'
+        password: '******'
+
+- name: 'default-email'
+  email_configs:
+  - to: 'iamhuchenyu@163.com'         # 收件人
+    send_resolved: true               # 发送恢复通知
+
+inhibit_rules:
+- source_match:
+    severity: 'critical'
+  target_match_re:
+    severity: 'warning|info'
+  equal: [alertname]
